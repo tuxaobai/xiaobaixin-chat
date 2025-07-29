@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小白信 - 主题聊天室</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <!-- LeanCloud SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.0/dist/av-min.js"></script>
+  
+  <!-- 自定义配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#FF7E95', // 主色调：兔子粉
+            secondary: '#A084DC', // 辅助色：淡紫色
+            accent: '#93C5FD', // 强调色：天空蓝
+            neutral: {
+              100: '#F9FAFB',
+              200: '#F3F4F6',
+              300: '#E5E7EB',
+              400: '#D1D5DB',
+              500: '#9CA3AF',
+              600: '#6B7280',
+              700: '#4B5563',
+              800: '#1F2937',
+              900: '#111827',
+            }
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .hover-scale {
+        transition: transform 0.2s ease-in-out;
+      }
+      .hover-scale:hover {
+        transform: scale(1.02);
+      }
+      .glass {
+        backdrop-blur: 12px;
+        -webkit-backdrop-blur: 12px;
+      }
+      .bubble-right {
+        border-radius: 20px 20px 0 20px;
+      }
+      .bubble-left {
+        border-radius: 20px 20px 20px 0;
+      }
+      .scroll-smooth {
+        scroll-behavior: smooth;
+      }
+      .text-glow {
+        text-shadow: 0 0 8px rgba(255, 126, 149, 0.6);
+      }
+      .bg-darken {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+      .dark .bg-darken {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+    }
+  </style>
+</head>
+
+<body class="font-inter bg-gradient-to-br from-neutral-100 to-neutral-200 text-neutral-800 min-h-screen dark:bg-gradient-to-br from-neutral-900 to-neutral-800 dark:text-neutral-100 transition-colors duration-300">
+  <!-- 登录模态框 -->
+  <div id="login-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700/50 shadow-2xl animate-fade-in">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-lg">
+          <i class="fa fa-user-circle text-white text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-primary to-secondary inline-block text-transparent bg-clip-text text-glow">小白信</h2>
+        <p class="text-neutral-500 dark:text-neutral-400 mt-1">请登录后开始聊天</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="login-userid" class="block text-sm font-medium mb-1">用户ID</label>
+          <input type="text" id="login-userid" placeholder="请输入用户ID" 
+                class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm">
+        </div>
+        
+        <div>
+          <label for="login-password" class="block text-sm font-medium mb-1">密码</label>
+          <input type="password" id="login-password" placeholder="请输入密码" 
+                class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm">
+        </div>
+        
+        <div class="flex justify-between items-center">
+          <label class="flex items-center">
+            <input type="checkbox" id="remember-me" class="mr-2 rounded text-primary focus:ring-primary">
+            <span class="text-sm text-neutral-600 dark:text-neutral-400">记住我</span>
+          </label>
+          <button id="forgot-password" class="text-sm text-primary hover:text-primary/80">忘记密码?</button>
+        </div>
+        
+        <button id="login-btn" class="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-md font-medium">
+          登录
+        </button>
+        
+        <div class="relative text-center">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-neutral-200 dark:border-neutral-700"></div>
+          </div>
+          <div class="relative z-10">
+            <span class="px-2 bg-white dark:bg-neutral-800 text-sm text-neutral-500 dark:text-neutral-400">或者</span>
+          </div>
+        </div>
+        
+        <button id="register-btn" class="w-full bg-transparent border border-primary text-primary hover:bg-primary/10 py-3 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-sm font-medium">
+          注册新账号
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注册模态框 -->
+  <div id="register-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700/50 shadow-2xl animate-fade-in">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">创建新账号</h3>
+        <button id="close-register-modal" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:scale-110 transition-transform">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="register-nickname" class="block text-sm font-medium mb-1">昵称</label>
+          <input type="text" id="register-nickname" placeholder="请输入昵称 (1-10个字符)" 
+                class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm">
+          <p id="nickname-error" class="text-xs text-red-500 mt-1 hidden">昵称长度不符合要求</p>
+        </div>
+        
+        <div>
+          <label for="register-userid" class="block text-sm font-medium mb-1">用户ID</label>
+          <div class="relative">
+            <input type="text" id="register-userid" placeholder="请输入用户ID (3-20个字符，只能包含字母、数字和下划线)" 
+                  class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm pr-10">
+            <button id="check-userid-btn" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-primary">
+              <i class="fa fa-check-circle"></i>
+            </button>
+          </div>
+          <p id="userid-error" class="text-xs text-red-500 mt-1 hidden">用户ID不符合要求</p>
+          <p id="userid-exists" class="text-xs text-red-500 mt-1 hidden">该用户ID已存在</p>
+          <p id="userid-available" class="text-xs text-green-500 mt-1 hidden">该用户ID可用</p>
+        </div>
+        
+        <div>
+          <label for="register-password" class="block text-sm font-medium mb-1">密码</label>
+          <input type="password" id="register-password" placeholder="请输入密码 (至少6个字符)" 
+                class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm">
+          <p id="password-error" class="text-xs text-red-500 mt-1 hidden">密码长度不足</p>
+        </div>
+        
+        <div>
+          <label for="register-confirm-password" class="block text-sm font-medium mb-1">确认密码</label>
+          <input type="password" id="register-confirm-password" placeholder="请再次输入密码" 
+                class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm">
+          <p id="confirm-password-error" class="text-xs text-red-500 mt-1 hidden">两次输入的密码不一致</p>
+        </div>
+        
+        <button id="create-account-btn" class="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-md font-medium disabled:opacity-50" disabled>
+          创建账号
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 用户资料模态框 -->
+  <div id="user-profile-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700/50 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">用户资料</h3>
+        <button id="close-user-profile-modal" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:scale-110 transition-transform">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="text-center mb-4">
+        <div class="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center shadow-md">
+          <i class="fa fa-user-circle text-primary text-3xl"></i>
+        </div>
+        <h4 id="profile-nickname" class="font-bold text-lg mt-2"></h4>
+        <p id="profile-userid" class="text-sm text-neutral-500 dark:text-neutral-400">用户ID: <span></span></p>
+      </div>
+      
+      <div class="space-y-3">
+        <div class="flex justify-between items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
+          <span>注册时间</span>
+          <span id="profile-created-at" class="text-sm"></span>
+        </div>
+        
+        <div class="flex justify-between items-center p-3 bg-neutral-100 dark:bg-neutral-700/50 rounded-lg">
+          <span>最后在线</span>
+          <span id="profile-last-active" class="text-sm"></span>
+        </div>
+        
+        <button id="add-friend-btn" class="w-full mt-4 bg-primary hover:bg-primary/90 text-white py-2 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-sm">
+          <i class="fa fa-plus-circle mr-1"></i> 添加好友
+        </button>
+        
+        <button id="start-private-chat-btn" class="w-full mt-2 bg-accent hover:bg-accent/90 text-white py-2 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-sm">
+          <i class="fa fa-commenting-o mr-1"></i> 开始私聊
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 glass border-b border-neutral-200 dark:border-neutral-700/50 shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-sm">
+          <i class="fa fa-paper-plane text-white text-sm"></i>
+        </div>
+        <h1 class="text-xl font-bold bg-gradient-to-r from-primary to-secondary inline-block text-transparent bg-clip-text text-shadow">小白信</h1>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <div class="hidden md:flex items-center space-x-1 text-sm text-neutral-500 dark:text-neutral-400">
+          <i class="fa fa-users"></i>
+          <span id="online-count">0</span>
+          <span class="text-neutral-500 dark:text-neutral-500">位在线</span>
+        </div>
+        <button id="logout-btn" class="text-sm text-primary hover:text-primary/80 flex items-center hidden">
+          <i class="fa fa-sign-out mr-1"></i> 退出
+        </button>
+        <button id="theme-toggle" class="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700/50 transition-colors">
+          <i class="fa fa-moon-o dark:hidden"></i>
+          <i class="fa fa-sun-o hidden dark:inline-block"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+    <!-- 主题房间列表 (移动端隐藏) -->
+    <aside class="w-full md:w-64 hidden md:block">
+      <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-xl p-4 border border-neutral-200 dark:border-neutral-700/50 shadow-sm hover-scale">
+        <h2 class="font-bold text-lg mb-4 flex items-center">
+          <i class="fa fa-th-large text-primary mr-2"></i>
+          主题房间
+        </h2>
+        
+        <div class="space-y-2" id="room-list">
+          <!-- 房间列表将通过JS动态生成 -->
+        </div>
+      </div>
+      
+      <!-- 好友列表 -->
+      <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-xl p-4 border border-neutral-200 dark:border-neutral-700/50 shadow-sm hover-scale mt-4">
+        <h2 class="font-bold text-lg mb-4 flex items-center">
+          <i class="fa fa-users text-primary mr-2"></i>
+          我的好友
+        </h2>
+        
+        <div class="space-y-2" id="friends-list">
+          <!-- 好友列表将通过JS动态生成 -->
+          <div class="text-center text-neutral-400 text-xs py-2">
+            暂无好友
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 聊天主区域 -->
+    <section class="flex-1 flex flex-col">
+      <!-- 当前房间信息 -->
+      <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-t-xl p-4 border-x border-t border-neutral-200 dark:border-neutral-700/50 shadow-sm">
+        <div class="flex items-center justify-center">
+          <div class="text-center">
+            <h2 id="current-room" class="font-bold text-lg text-shadow">下班后闲聊</h2>
+            <p id="room-desc" class="text-sm text-neutral-600 dark:text-neutral-300">聊聊今天工作中的趣事或烦恼</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 消息列表 -->
+      <div id="message-container" class="flex-1 bg-white/60 dark:bg-neutral-900/60 glass border-x border-neutral-200 dark:border-neutral-700/50 overflow-y-auto scrollbar-hide p-4 space-y-4 scroll-smooth">
+        <!-- 欢迎消息 -->
+        <div class="text-center py-6 text-neutral-600 dark:text-neutral-300 bg-darken rounded-xl">
+          <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-md">
+            <i class="fa fa-comments text-white text-2xl"></i>
+          </div>
+          <p class="font-medium">欢迎使用 <span class="font-bold text-primary">小白信</span></p>
+          <p class="text-sm mt-1">请文明发言，遵守社区规则</p>
+        </div>
+        
+        <!-- 消息将通过JS动态生成 -->
+      </div>
+      
+      <!-- 输入区域 -->
+      <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-b-xl p-4 border-x border-b border-neutral-200 dark:border-neutral-700/50 shadow-sm">
+        <div class="flex items-end space-x-2 mb-3">
+          <!-- 文件上传按钮 -->
+          <label for="file-upload" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-primary dark:hover:text-primary hover:scale-110 transition-transform cursor-pointer">
+            <i class="fa fa-paperclip"></i>
+            <input type="file" id="file-upload" class="hidden" accept="*">
+          </label>
+          
+          <!-- 表情包按钮 -->
+          <button id="emoji-btn" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-primary dark:hover:text-primary hover:scale-110 transition-transform">
+            <i class="fa fa-smile-o"></i>
+          </button>
+          
+          <!-- 自定义表情包按钮 -->
+          <button id="custom-emoji-btn" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-primary dark:hover:text-primary hover:scale-110 transition-transform">
+            <i class="fa fa-image"></i>
+          </button>
+          
+          <!-- 输入框 -->
+          <div class="flex-1 relative">
+            <textarea id="message-input" placeholder="请先登录再发言..." class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-2xl py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm resize-none min-h-[40px]" style="max-height: 120px;" disabled></textarea>
+            
+            <!-- 图片预览 -->
+            <div id="image-preview" class="hidden mt-2 grid grid-cols-3 gap-2">
+              <!-- 预览图将通过JS动态生成 -->
+            </div>
+          </div>
+          
+          <!-- 发送按钮 -->
+          <button id="send-btn" class="p-3 bg-gray-400 text-white rounded-full transition-colors shadow-sm cursor-not-allowed" disabled>
+            <i class="fa fa-paper-plane"></i>
+          </button>
+        </div>
+        
+        <!-- 登录提示 -->
+        <div id="login-prompt" class="mt-3 text-sm text-neutral-500 dark:text-neutral-400 text-center">
+          <span>请 <button id="login-prompt-btn" class="text-primary hover:text-primary/80 hover:underline">登录</button> 后开始聊天</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 版权信息 -->
+  <footer class="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-400 pb-4">
+    <p>© 2025 兔小白工作室 · 版权所有</p>
+  </footer>
+
+  <!-- 移动端房间选择模态框 -->
+  <div id="room-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700/50 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">选择主题房间</h3>
+        <button id="close-modal" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:scale-110 transition-transform">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-3 max-h-80 overflow-y-auto" id="mobile-room-list">
+        <!-- 房间列表将通过JS动态生成 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 更改昵称模态框 -->
+  <div id="nickname-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700/50 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">设置你的昵称</h3>
+        <button id="close-nickname-modal" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:scale-110 transition-transform">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <p class="text-neutral-600 dark:text-neutral-400 text-sm">请输入一个昵称，方便其他用户认识你</p>
+        <input type="text" id="nickname-input" placeholder="输入昵称 (最多10个字符)" maxlength="10" 
+              class="w-full bg-neutral-100 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600/50 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm">
+        <button id="save-nickname" class="w-full bg-primary hover:bg-primary/90 text-white py-2 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-sm">
+          保存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emoji选择器 -->
+  <div id="emoji-picker" class="fixed bottom-40 right-4 bg-white dark:bg-neutral-800 rounded-xl p-3 border border-neutral-200 dark:border-neutral-700/50 shadow-lg hidden animate-fade-in glass w-64">
+    <div class="grid grid-cols-8 gap-2">
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😄</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😂</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😊</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😍</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">🤔</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😎</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">🥳</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">🤗</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😴</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">😡</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">🥺</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">🤯</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">👏</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">👍</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">👀</button>
+      <button class="emoji-btn p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700/50 rounded-full hover:scale-125 transition-transform">💤</button>
+    </div>
+  </div>
+
+  <!-- 自定义表情包上传模态框 -->
+  <div id="custom-emoji-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700/50 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">上传自定义表情包</h3>
+        <button id="close-custom-emoji-modal" class="p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:scale-110 transition-transform">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <div class="text-center p-6 border-2 border-dashed border-neutral-300 dark:border-neutral-600 rounded-lg cursor-pointer hover:border-primary dark:hover:border-primary transition-colors">
+          <label for="custom-emoji-upload" class="cursor-pointer">
+            <i class="fa fa-cloud-upload text-3xl text-neutral-400 mb-2"></i>
+            <p class="text-sm">点击或拖拽文件到此处上传</p>
+            <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">支持 JPG, PNG, GIF 格式，最大 2MB</p>
+            <input type="file" id="custom-emoji-upload" class="hidden" accept="image/*">
+          </label>
+        </div>
+        
+        <div id="custom-emoji-preview" class="hidden">
+          <h4 class="font-medium mb-2">预览</h4>
+          <div class="w-full h-48 bg-neutral-100 dark:bg-neutral-700 rounded-lg flex items-center justify-center overflow-hidden">
+            <img id="custom-emoji-image" src="" alt="自定义表情包预览" class="max-w-full max-h-full">
+          </div>
+        </div>
+        
+        <button id="save-custom-emoji" class="w-full bg-primary hover:bg-primary/90 text-white py-2 rounded-lg transition-colors hover:scale-[1.02] transition-transform shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          保存表情包
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自定义表情包选择器 -->
+  <div id="custom-emoji-picker" class="fixed bottom-40 right-4 bg-white dark:bg-neutral-800 rounded-xl p-3 border border-neutral-200 dark:border-neutral-700/50 shadow-lg hidden animate-fade-in glass w-64">
+    <div class="flex justify-between items-center mb-2">
+      <h4 class="text-sm font-medium">自定义表情包</h4>
+      <button id="add-custom-emoji" class="text-xs text-primary hover:text-primary/80">
+        <i class="fa fa-plus-circle"></i> 添加
+      </button>
+    </div>
+    <div class="grid grid-cols-4 gap-2" id="custom-emoji-list">
+      <!-- 自定义表情包将通过JS动态生成 -->
+      <div class="text-center text-neutral-400 text-xs col-span-4 py-3">
+        暂无自定义表情包
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化LeanCloud（已填入你的配置）
+    const APP_ID = '7TkKVrelDpTPcaoBG1M8ivcR-gzGzoHsz';
+    const APP_KEY = '8doPOenPUVf7Lh48amsxfMSI';
+    const SERVER_URL = 'https://7tkkvrel.lc-cn-n1-shared.com';
+    
+    AV.init({
+      appId: APP_ID,
+      appKey: APP_KEY,
+      serverURL: SERVER_URL
+    });
+    
+    // 房间数据
+    const rooms = [
+      { id: 'general', name: '闲聊大厅', desc: '和大家一起畅聊各种话题', icon: 'fa-coffee' },
+      { id: 'study', name: '学习互助', desc: '一起讨论学习问题，互相帮助', icon: 'fa-book' },
+      { id: 'game', name: '游戏开黑', desc: '找队友一起玩游戏，讨论新出的游戏', icon: 'fa-gamepad' },
+      { id: 'music', name: '音乐交流', desc: '推荐好听的歌曲，分享音乐背后的故事', icon: 'fa-music' },
+      { id: 'interest', name: '兴趣爱好', desc: '分享你的兴趣爱好，找到志同道合的朋友', icon: 'fa-paint-brush' }
+    ];
+    
+    // 全局变量
+    let currentUser = null;
+    let messageQuery;
+    let userQuery;
+    let messageSubscription;
+    let userSubscription;
+    let pendingFiles = []; // 待发送的文件
+    let customEmojis = []; // 自定义表情包
+    
+    // 生成随机用户ID
+    function generateUserId() {
+      return 'user_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    // 转义HTML特殊字符
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', () => {
+      initRooms();
+      setupEventListeners();
+      loadNicknameFromStorage();
+      loadCustomEmojis();
+      checkDarkMode();
+      
+      // 检查是否已登录
+      const savedUser = localStorage.getItem('chatAppUser');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          if (!currentUser.room) currentUser.room = 'general';
+          joinRoom(currentUser.room);
+          document.getElementById('login-modal').classList.add('hidden');
+          document.getElementById('message-input').disabled = false;
+          document.getElementById('send-btn').disabled = false;
+          document.getElementById('send-btn').classList.remove('bg-gray-400');
+          document.getElementById('send-btn').classList.add('bg-primary');
+          document.getElementById('login-prompt').classList.add('hidden');
+          document.getElementById('logout-btn').classList.remove('hidden');
+          document.getElementById('current-nickname').textContent = currentUser.nickname;
+        } catch (e) {
+          console.error('解析用户数据失败:', e);
+          showLoginModal();
+        }
+      } else {
+        showLoginModal();
+      }
+    });
+    
+    // 显示登录模态框
+    function showLoginModal() {
+      document.getElementById('login-modal').classList.remove('hidden');
+      document.getElementById('login-userid').focus();
+    }
+    
+    // 检查并设置暗黑模式
+    function checkDarkMode() {
+      if (localStorage.getItem('darkMode') === 'true' || 
+          (localStorage.getItem('darkMode') === null && 
+           window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.body.classList.add('dark');
+      }
+    }
+    
+    // 初始化房间列表
+    function initRooms() {
+      const roomList = document.getElementById('room-list');
+      const mobileRoomList = document.getElementById('mobile-room-list');
+      
+      rooms.forEach(room => {
+        // 桌面版房间列表
+        const roomItem = document.createElement('div');
+        roomItem.className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors flex items-center 
+                             ${currentUser && room.id === currentUser.room ? 'bg-neutral-100 dark:bg-neutral-700/50 border-l-4 border-primary' : ''}`;
+        roomItem.innerHTML = `
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+            <i class="fa ${room.icon} text-primary"></i>
+          </div>
+          <div>
+            <div class="font-medium">${room.name}</div>
+            <div class="text-xs text-neutral-500 dark:text-neutral-400">${room.desc}</div>
+          </div>
+        `;
+        roomItem.addEventListener('click', () => joinRoom(room.id));
+        roomList.appendChild(roomItem);
+        
+        // 移动版房间列表
+        const mobileRoomItem = document.createElement('div');
+        mobileRoomItem.className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors flex items-center 
+                                  ${currentUser && room.id === currentUser.room ? 'bg-neutral-100 dark:bg-neutral-700/50 border-l-4 border-primary' : ''}`;
+        mobileRoomItem.innerHTML = `
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+            <i class="fa ${room.icon} text-primary"></i>
+          </div>
+          <div>
+            <div class="font-medium">${room.name}</div>
+            <div class="text-sm text-neutral-500 dark:text-neutral-400">${room.desc}</div>
+          </div>
+        `;
+        mobileRoomItem.addEventListener('click', () => {
+          joinRoom(room.id);
+          document.getElementById('room-modal').classList.add('hidden');
+        });
+        mobileRoomList.appendChild(mobileRoomItem);
+      });
+    }
+    
+    // 加入房间
+    function joinRoom(roomId) {
+      if (!currentUser) {
+        showLoginModal();
+        return;
+      }
+      
+      // 离开当前房间
+      if (messageSubscription) messageSubscription.unsubscribe();
+      if (userSubscription) userSubscription.unsubscribe();
+      
+      // 更新当前房间
+      const room = rooms.find(r => r.id === roomId);
+      if (!room) return;
+      
+      currentUser.room = roomId;
+      document.getElementById('current-room').textContent = room.name;
+      document.getElementById('room-desc').textContent = room.desc;
+      
+      // 更新房间列表选中状态
+      updateRoomSelection(roomId);
+      
+      // 清空消息容器
+      const messageContainer = document.getElementById('message-container');
+      messageContainer.innerHTML = '';
+      
+      // 添加加载提示
+      const loadingIndicator = document.createElement('div');
+      loadingIndicator.className = 'text-center py-4 text-neutral-500 dark:text-neutral-400';
+      loadingIndicator.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> 加载中...';
+      messageContainer.appendChild(loadingIndicator);
+      
+      // 查询消息
+      const Message = AV.Object.extend(`ChatMessage_${roomId}`);
+      messageQuery = new AV.Query(Message);
+      messageQuery.limit(100);
+      messageQuery.ascending('createdAt');
+      
+      // 订阅消息变化
+      messageQuery.find().then(messages => {
+        messageContainer.innerHTML = '';
+        messages.forEach(msg => {
+          addMessageToUI(msg.toJSON());
+        });
+        scrollToBottom();
+        
+        // 订阅实时消息
+        messageSubscription = messageQuery.subscribe();
+        messageSubscription.on('create', msg => {
+          addMessageToUI(msg.toJSON());
+          scrollToBottom();
+        });
+      }).catch(error => {
+        console.error('获取消息失败:', error);
+        messageContainer.innerHTML = '<div class="text-center py-4 text-red-500">加载消息失败，请刷新页面</div>';
+      });
+      
+      // 记录用户在线状态
+      const User = AV.Object.extend(`OnlineUsers_${roomId}`);
+      const userObj = new User();
+      userObj.set('userId', currentUser.id);
+      userObj.set('nickname', currentUser.nickname);
+      userObj.save().then(savedUser => {
+        // 设置在线用户监听
+        userQuery = new AV.Query(User);
+        
+        // 定期更新用户在线状态
+        setInterval(() => {
+          savedUser.set('lastActive', new Date());
+          savedUser.save();
+        }, 30000);
+      });
+      
+      // 监听在线用户变化
+      updateOnlineCount(roomId);
+      setInterval(() => updateOnlineCount(roomId), 10000);
+      
+      // 保存到本地存储
+      localStorage.setItem('chatAppUser', JSON.stringify({
+        id: currentUser.id,
+        nickname: currentUser.nickname,
+        room: currentUser.room
+      }));
+    }
+    
+    // 更新房间选择状态
+    function updateRoomSelection(roomId) {
+      const roomItems = document.querySelectorAll('#room-list > div');
+      const mobileRoomItems = document.querySelectorAll('#mobile-room-list > div');
+      
+      rooms.forEach((room, index) => {
+        const isSelected = room.id === roomId;
+        roomItems[index].className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors flex items-center 
+                                    ${isSelected ? 'bg-neutral-100 dark:bg-neutral-700/50 border-l-4 border-primary' : ''}`;
+        mobileRoomItems[index].className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors flex items-center 
+                                          ${isSelected ? 'bg-neutral-100 dark:bg-neutral-700/50 border-l-4 border-primary' : ''}`;
+      });
+    }
+    
+    // 更新在线人数
+    function updateOnlineCount(roomId) {
+      const User = AV.Object.extend(`OnlineUsers_${roomId}`);
+      const query = new AV.Query(User);
+      
+      // 只计算最近1分钟活跃的用户
+      const oneMinuteAgo = new Date();
+      oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+      query.greaterThanOrEqualTo('lastActive', oneMinuteAgo);
+      
+      query.count().then(count => {
+        document.getElementById('online-count').textContent = count;
+      }).catch(error => {
+        console.error('获取在线人数失败:', error);
+      });
+    }
+    
+    // 添加消息到UI
+    function addMessageToUI(message) {
+      const messageContainer = document.getElementById('message-container');
+      const isCurrentUser = message.userId === currentUser?.id;
+      
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex ${isCurrentUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
+      
+      let bgColor, textColor, bubbleClass;
+      if (isCurrentUser) {
+        bgColor = 'bg-primary';
+        textColor = 'text-white';
+        bubbleClass = 'bubble-right';
+      } else {
+        bgColor = 'bg-neutral-100 dark:bg-neutral-700/50';
+        textColor = 'text-neutral-800 dark:text-neutral-100';
+        bubbleClass = 'bubble-left';
+      }
+      
+      // 解析消息内容
+      let contentHtml = '';
+      if (message.type === 'text') {
+        // 处理普通文本消息
+        contentHtml = `<p>${escapeHTML(message.content)}</p>`;
+      } else if (message.type === 'image') {
+        // 处理图片消息
+        contentHtml = `
+          <div class="relative">
+            <img src="${message.url}" alt="图片消息" class="max-w-[200px] rounded-lg hover:scale-110 transition-transform cursor-zoom-in">
+          </div>
+        `;
+      } else if (message.type === 'system') {
+        // 处理系统消息
+        msgDiv.className = 'flex justify-center animate-fade-in';
+        contentHtml = `
+          <div class="text-center px-4 py-1 rounded-full bg-neutral-200 dark:bg-neutral-700 text-xs text-neutral-600 dark:text-neutral-300">
+            ${escapeHTML(message.content)}
+          </div>
+        `;
+        bgColor = '';
+        textColor = '';
+        bubbleClass = '';
+      }
+      
+      // 构建消息HTML
+      if (message.type !== 'system') {
+        msgDiv.innerHTML = `
+          <div class="max-w-[80%]">
+            <div class="flex items-center mb-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}">
+              ${isCurrentUser ? '' : `<span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">${escapeHTML(message.nickname)}</span>`}
+              <span class="text-xs text-neutral-400 dark:text-neutral-500 ml-2">${formatTime(message.createdAt)}</span>
+            </div>
+            <div class="${bgColor} ${textColor} ${bubbleClass} p-3 shadow-sm">
+              ${contentHtml}
+            </div>
+          </div>
+        `;
+      } else {
+        msgDiv.innerHTML = contentHtml;
+      }
+      
+      messageContainer.appendChild(msgDiv);
+    }
+    
+    // 格式化时间
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    // 滚动到底部
+    function scrollToBottom() {
+      const messageContainer = document.getElementById('message-container');
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+    
+    // 发送消息
+    function sendMessage(content, type = 'text', url = '') {
+      if (!currentUser) {
+        showLoginModal();
+        return;
+      }
+      
+      if (!content.trim() && type === 'text') return;
+      
+      const Message = AV.Object.extend(`ChatMessage_${currentUser.room}`);
+      const message = new Message();
+      
+      message.set('userId', currentUser.id);
+      message.set('nickname', currentUser.nickname);
+      message.set('content', content);
+      message.set('type', type);
+      if (url) message.set('url', url);
+      
+      message.save().then(() => {
+        if (type === 'text') {
+          document.getElementById('message-input').value = '';
+        } else if (type === 'image') {
+          document.getElementById('image-preview').classList.add('hidden');
+          pendingFiles = [];
+        }
+      }).catch(error => {
+        console.error('发送消息失败:', error);
+        alert('发送消息失败，请重试');
+      });
+    }
+    
+    // 上传图片
+    function uploadImage(file) {
+      const name = `image_${Date.now()}.${file.name.split('.').pop()}`;
+      const avFile = new AV.File(name, file);
+      
+      return avFile.save().then(file => {
+        return file.url();
+      }).catch(error => {
+        console.error('上传图片失败:', error);
+        throw error;
+      });
+    }
+    
+    // 加载本地存储的昵称
+    function loadNicknameFromStorage() {
+      const savedUser = localStorage.getItem('chatAppUser');
+      if (savedUser) {
