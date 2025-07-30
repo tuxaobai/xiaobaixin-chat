@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小白信 - 主题聊天室</title>
+  <!-- 添加资源预加载 -->
+  <link rel="preconnect" href="https://cdn.tailwindcss.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  
+  <!-- 外部资源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.12.0/dist/av-min.js"></script>
+  <!-- 新增：引入LiveQuery支持 -->
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-realtime@4.5.0/dist/realtime-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-live-query@4.5.0/dist/live-query-min.js"></script>
+
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4DD0E1', // 浅蓝绿色
+            secondary: '#FF9800', // 橙色
+            accent: '#FFCC80', // 浅橙色
+            neutral: {
+              100: '#F9FAFB',
+              200: '#F3F4F6',
+              300: '#E5E7EB',
+              400: '#D1D5DB',
+              500: '#9CA3AF',
+              600: '#6B7280',
+              700: '#4B5563',
+              800: '#1F2937',
+              900: '#111827',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+
+      .bubble-right {
+        border-radius: 20px 20px 0 20px;
+      }
+
+      .bubble-left {
+        border-radius: 20px 20px 20px 0;
+      }
+
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .hover-scale {
+        transition: transform 0.2s ease-in-out;
+      }
+
+      .hover-scale:hover {
+        transform: scale(1.02);
+      }
+
+      .glass {
+        backdrop-blur: 12px;
+        -webkit-backdrop-blur: 12px;
+      }
+
+      .text-glow {
+        text-shadow: 0 0 8px rgba(77, 208, 225, 0.6);
+      }
+
+      .gradient-text {
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+      }
+
+      .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+      }
+
+      .emoji-item {
+        font-size: 24px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .emoji-item:hover {
+        transform: scale(1.2);
+      }
+
+      /* 按钮点击过渡动画 */
+      .button-transition {
+        transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+      }
+
+      .button-transition:active {
+        transform: scale(0.95);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes bgFadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 0.7;
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+      }
+    }
+
+    @keyframes focusRing {
+      from {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+      }
+      to {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+      }
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* 全局样式优化 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      scroll-behavior: smooth;
+    }
+
+    /* 添加刷新动画 */
+    @keyframes refreshPulse {
+      0% { transform: scale(1); opacity: 1; color: #6b7280; }
+      50% { transform: scale(1.2); opacity: 0.7; color: #3b82f6; }
+      100% { transform: scale(1); opacity: 1; color: #6b7280; }
+    }
+
+    .refresh-active i {
+      animation: refreshPulse 2s infinite;
+    }
+
+    /* 登录模态框样式优化 */
+    #login-modal {
+      animation: bgFadeIn 0.3s ease-out forwards;
+    }
+
+    #login-modal .bg-white, #login-modal .bg-neutral-800 {
+      animation: fadeIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #login-modal .bg-white:hover, #login-modal .bg-neutral-800:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* 按钮样式优化 */
+    .button-transition {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .button-transition:hover {
+      transform: translateY(-2px);
+      animation: pulse 1.5s infinite;
+    }
+
+    .button-transition:active {
+      transform: translateY(1px);
+    }
+
+    /* 输入框样式优化 */
+    input:focus {
+      animation: focusRing 0.3s ease-out forwards;
+    }
+
+    /* 消息气泡动画 */
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    /* 房间列表项动画 */
+    #room-list > div, #mobile-room-list > div {
+      transition: all 0.2s ease;
+    }
+
+    #room-list > div:hover, #mobile-room-list > div:hover {
+      transform: translateX(3px);
+    }
+
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(156, 163, 175, 0.8);
+    }
+
+    /* 新手指南弹窗动画 */
+    #guide-modal .bg-white, #guide-modal .bg-neutral-800 {
+      animation: slideUp 0.4s ease-out forwards;
+    }
+
+    /* 新增：表单错误状态 */
+    .input-error {
+      border: 2px solid #ef4444 !important;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+      .mobile-flex-col {
+        flex-direction: column;
+      }
+
+      .mobile-full-width {
+        width: 100%;
+      }
+
+      .mobile-room-btn {
+        display: block;
+      }
+
+      .mobile-hidden {
+        display: none;
+      }
+
+      .message-input-height {
+        min-height: 60px;
+      }
+
+      /* 新增：移动端优化 */
+      #refresh-messages-btn {
+        font-size: 12px;
+        padding: 4px 8px;
+        white-space: nowrap;
+      }
+
+      #auto-refresh-btn {
+        font-size: 12px;
+        padding: 4px 8px;
+        white-space: nowrap;
+      }
+
+      .interval-option {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+
+      #interval-menu {
+        right: 0;
+        left: 0;
+        width: auto;
+        margin: 0 10px;
+      }
+
+      #user-info {
+        display: none;
+      }
+  
+      /* 登录模态框优化 */
+      #login-modal .bg-white, #login-modal .bg-neutral-800 {
+        margin: 0 15px;
+        padding: 20px;
+      }
+  
+      /* 消息输入区域优化 */
+      .message-input-container {
+        padding: 8px;
+      }
+  
+      /* 按钮大小优化 */
+      #send-btn, #upload-btn, #emoji-btn {
+        padding: 10px;
+        min-width: 44px;
+        min-height: 44px;
+      }
+  
+      /* 修复表情包按钮背景错位问题 */
+      #emoji-btn {
+        background-color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+  
+      /* 房间列表优化 */
+      #room-list, #mobile-room-list {
+        max-height: 60vh;
+      }
+  }
+  </style>
+</head>
+
+<body class="bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-100 transition-colors duration-300 min-h-screen">
+  <!-- 登录模态框 -->
+  <div id="login-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md p-6 shadow-xl animate-fade-in relative overflow-hidden">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-lg">
+          <i class="fa fa-paper-plane text-white text-2xl"></i>
+        </div>
+        <h2 class="text-3xl font-bold gradient-text bg-gradient-to-r from-primary to-secondary">小白信</h2>
+        <p class="text-neutral-500 dark:text-neutral-400 mt-1">欢迎使用小白信聊天平台</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">用户ID</label>
+          <input type="text" id="userid" placeholder="请输入用户ID (字母和数字)" required
+            class="w-full bg-neutral-100 dark:bg-neutral-700 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-600">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">密码</label>
+          <input type="password" id="password" placeholder="请输入密码 (字母和数字)" required
+            class="w-full bg-neutral-100 dark:bg-neutral-700 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-600">
+        </div>
+
+        <p class="text-xs text-neutral-500 dark:text-neutral-400 text-center mt-2">
+          未注册账号的我们将自动为你注册
+        </p>
+
+        <button id="auth-btn" class="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg button-transition">
+          <span id="auth-btn-text">立即进入</span>
+          <span id="auth-loading" class="loading-spinner hidden"></span>
+        </button>
+      </div>
+
+      <!-- 新增：底部装饰 -->
+      <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-secondary/10 rounded-full blur-3xl"></div>
+    </div>
+  </div>
+
+
+  <!-- 主界面 -->
+  <div id="main-container" class="hidden">
+    <!-- 顶部导航 -->
+    <header class="sticky top-0 z-40 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-700">
+      <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <!-- 移动端房间选择按钮 -->
+          <button id="mobile-room-btn" class="md:hidden p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-700 button-transition">
+            <i class="fa fa-th-large text-primary"></i>
+          </button>
+
+          <div class="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
+            <i class="fa fa-paper-plane text-white text-sm"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold gradient-text bg-gradient-to-r from-primary to-secondary">小白信</h1>
+            <span id="user-info" class="text-xs text-neutral-500 dark:text-neutral-400">未登录</span>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <button id="logout-btn" class="text-sm text-neutral-500 hover:text-neutral-800 dark:hover:text-white button-transition">
+            <i class="fa fa-sign-out mr-1"></i>退出
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-0 md:px-4 py-6 flex flex-col md:flex-row gap-6">
+      <!-- 主题房间列表 (移动端隐藏) -->
+      <aside class="w-full md:w-64 hidden md:block">
+        <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-xl p-4 border border-neutral-200 dark:border-neutral-700 hover-scale">
+          <h2 class="font-bold text-lg mb-4 flex items-center">
+            <i class="fa fa-th-large text-primary mr-2"></i>
+            主题房间
+          </h2>
+
+          <div class="space-y-2" id="room-list">
+            <!-- 房间列表将通过JS动态生成 -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- 聊天主区域 -->
+      <section class="flex-1 flex flex-col px-2 md:px-0">
+        <!-- 当前房间信息 -->
+        <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-t-xl p-4 border-x border-t border-neutral-200 dark:border-neutral-700">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 id="current-room" class="font-bold text-lg text-shadow">下班后闲聊</h2>
+              <p id="room-desc" class="text-sm text-neutral-600 dark:text-neutral-300">聊聊今天工作中的趣事或烦恼</p>
+            </div>
+            <!-- 新增：刷新消息和自动刷新控制 -->
+            <div class="flex items-center space-x-2">
+              <button id="refresh-messages-btn" class="px-3 py-1 bg-primary/10 text-primary rounded-lg text-sm button-transition">
+                <i class="fa fa-refresh mr-1"></i>获取消息
+              </button>
+              <div class="relative">
+                <button id="auto-refresh-btn" class="px-3 py-1 bg-neutral-100 dark:bg-neutral-700 rounded-lg text-sm button-transition">
+                <i class="fa fa-clock-o mr-1"></i><span id="refresh-interval-text">5</span>
+              </button>
+                <div id="interval-menu" class="absolute right-0 mt-2 w-36 bg-white dark:bg-neutral-800 rounded-md shadow-lg py-1 z-10 hidden">
+  <div class="interval-option px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer" data-interval="0">无 (关闭自动刷新)</div>
+  <div class="interval-option px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer" data-interval="3000">3秒</div>
+  <div class="interval-option px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer" data-interval="5000">5秒</div>
+  <div class="interval-option px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer" data-interval="10000">10秒</div>
+  <div class="interval-option px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer" data-interval="30000">30秒</div>
+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 消息列表 -->
+        <div id="message-container" class="flex-1 bg-white/60 dark:bg-neutral-900/60 glass border-x border-neutral-200 dark:border-neutral-700 overflow-y-auto scrollbar-hide p-4 space-y-4 scroll-smooth"
+          style="max-height: 400px; min-height: 400px;">
+          <!-- 欢迎消息 -->
+          <div class="text-center py-6 text-neutral-600 dark:text-neutral-300 bg-neutral-100/50 dark:bg-neutral-800/50 rounded-xl">
+            <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-md">
+              <i class="fa fa-comments text-white text-2xl"></i>
+            </div>
+            <p class="font-medium">欢迎使用 <span class="font-bold text-primary">小白信</span></p>
+            <p class="text-sm mt-1">请文明发言，遵守社区规则</p>
+          </div>
+
+          <!-- 消息将通过JS动态生成 -->
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="bg-white/80 dark:bg-neutral-800/80 glass rounded-b-xl p-4 border-x border-b border-neutral-200 dark:border-neutral-700">
+          <div class="flex items-end space-x-2 mb-3">
+            <!-- 文件上传按钮 -->
+            <input type="file" id="file-input" accept="image/*,video/*" class="hidden">
+            <button id="upload-btn" class="p-2 text-neutral-500 hover:text-primary dark:hover:text-primary hover:scale-110 transition-transform button-transition">
+              <i class="fa fa-paperclip"></i>
+            </button>
+
+            <!-- 表情包按钮 -->
+            <button id="emoji-btn" class="p-2 text-neutral-500 hover:text-primary dark:hover:text-primary hover:scale-110 transition-transform button-transition">
+              <i class="fa fa-smile-o"></i>
+            </button>
+
+            <!-- 输入框 -->
+            <div class="flex-1 relative">
+              <textarea id="message-input" placeholder="请先登录再发言..."
+                class="w-full bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 rounded-2xl py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm shadow-sm resize-none min-h-[60px] message-input-height"
+                style="max-height: 120px;" disabled></textarea>
+
+              <!-- 表情包选择器 -->
+              <div id="emoji-picker" class="hidden absolute bottom-full mb-2 left-0 w-full max-w-xs bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-3 z-10 border border-neutral-200 dark:border-neutral-700">
+                <div class="emoji-grid">
+                  <div class="emoji-item">😀</div>
+                  <div class="emoji-item">😃</div>
+                  <div class="emoji-item">😄</div>
+                  <div class="emoji-item">😁</div>
+                  <div class="emoji-item">😆</div>
+                  <div class="emoji-item">😅</div>
+                  <div class="emoji-item">😂</div>
+                  <div class="emoji-item">🤣</div>
+                  <div class="emoji-item">😊</div>
+                  <div class="emoji-item">😇</div>
+                  <div class="emoji-item">🙂</div>
+                  <div class="emoji-item">🙃</div>
+                  <div class="emoji-item">😉</div>
+                  <div class="emoji-item">😌</div>
+                  <div class="emoji-item">😍</div>
+                  <div class="emoji-item">🥰</div>
+                  <div class="emoji-item">😘</div>
+                  <div class="emoji-item">😗</div>
+                  <div class="emoji-item">😙</div>
+                  <div class="emoji-item">😚</div>
+                  <div class="emoji-item">😋</div>
+                  <div class="emoji-item">😛</div>
+                  <div class="emoji-item">😝</div>
+                  <div class="emoji-item">😜</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 发送按钮 -->
+            <button id="send-btn" class="p-3 bg-gray-400 text-white rounded-full transition-colors shadow-sm cursor-not-allowed button-transition" disabled>
+              <i class="fa fa-paper-plane"></i>
+            </button>
+          </div>
+
+          <!-- 登录提示 -->
+          <div id="login-prompt" class="mt-3 text-sm text-neutral-500 dark:text-neutral-400 text-center">
+            <span>请 <button id="login-prompt-btn" class="text-primary hover:text-primary/80 hover:underline button-transition">登录</button> 后开始聊天</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-400 pb-4">
+      <p>© 2025 兔小白工作室 · 版权所有</p>
+    </footer>
+  </div>
+
+  <!-- 移动端房间选择模态框 -->
+  <div id="room-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md mx-4 p-6 border border-neutral-200 dark:border-neutral-700 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">选择主题房间</h3>
+        <button id="close-modal" class="p-2 text-neutral-500 hover:text-neutral-800 dark:hover:text-white hover:scale-110 transition-transform button-transition">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 max-h-80 overflow-y-auto" id="mobile-room-list">
+        <!-- 房间列表将通过JS动态生成 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化LeanCloud
+    const APP_ID = '7TkKVrelDpTPcaoBG1M8ivcR-gzGzoHsz';
+    const APP_KEY = '8doPOenPUVf7Lh48amsxfMSI';
+    const SERVER_URL = 'https://7tkkvrel.lc-cn-n1-shared.com';
+
+    AV.init({
+      appId: APP_ID,
+      appKey: APP_KEY,
+      serverURL: SERVER_URL
+    });
+
+    // 房间数据
+    const rooms = [
+      { id: 'general', name: '闲聊大厅', desc: '和大家一起畅聊各种话题', icon: 'fa-coffee' },
+      { id: 'study', name: '学习互助', desc: '一起讨论学习问题，互相帮助', icon: 'fa-book' },
+      { id: 'game', name: '游戏开黑', desc: '找队友一起玩游戏，讨论新出的游戏', icon: 'fa-gamepad' },
+      { id: 'music', name: '音乐交流', desc: '推荐好听的歌曲，分享音乐背后的故事', icon: 'fa-music' },
+      { id: 'interest', name: '兴趣爱好', desc: '分享你的兴趣爱好，找到志同道合的朋友', icon: 'fa-paint-brush' }
+    ];
+
+    // 全局变量
+    let currentUser = null;
+    let currentSubscription = null; // 实时订阅对象
+    let messageQuery = null;
+    let refreshInterval = null;
+    let pendingFiles = []; // 待发送的文件
+    let lastMessageId = null; // 新增：确保初始化
+    let userScrolledUp = false; // 用户是否手动上滑
+    let autoRefreshInterval = 0; // 默认关闭自动刷新
+
+    // 转义HTML特殊字符
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', () => {
+      initRooms();
+      setupEventListeners();
+      checkDarkMode();
+
+      // 修复自定义刷新按钮初始显示
+      document.getElementById('refresh-interval-text').textContent = '无';
+
+      // 检查是否已登录
+      const savedUser = localStorage.getItem('chatAppUser');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          // 安全检查：移除本地存储中的密码
+          if (currentUser.password) {
+            delete currentUser.password;
+            localStorage.setItem('chatAppUser', JSON.stringify(currentUser));
+          }
+          if (!currentUser.room) currentUser.room = 'general';
+          joinRoom(currentUser.room);
+          document.getElementById('login-modal').classList.add('hidden');
+          document.getElementById('main-container').classList.remove('hidden');
+          document.getElementById('message-input').disabled = false;
+          document.getElementById('message-input').placeholder = "输入消息...";
+          document.getElementById('send-btn').disabled = false;
+          document.getElementById('send-btn').classList.remove('bg-gray-400');
+          document.getElementById('send-btn').classList.add('bg-primary');
+          document.getElementById('login-prompt').classList.add('hidden');
+          document.getElementById('logout-btn').classList.remove('hidden');
+          updateUserInfo();
+          // 强制更新用户信息显示
+          setTimeout(() => {
+            document.getElementById('user-info').textContent = `${currentUser.nickname} (${currentUser.id})`;
+          }, 100);
+          scrollToBottom(); // 新增：确保初始显示在底部
+        } catch (e) {
+          console.error('解析用户数据失败:', e);
+          showLoginModal();
+        }
+      } else {
+        showLoginModal();
+      }
+    });
+
+    // 显示登录模态框
+    function showLoginModal() {
+      document.getElementById('login-modal').classList.remove('hidden');
+      document.getElementById('login-userid').focus();
+    }
+
+    // 检查并设置暗黑模式
+    function checkDarkMode() {
+      if (localStorage.getItem('darkMode') === 'true' ||
+        (localStorage.getItem('darkMode') === null &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.body.classList.add('dark');
+      }
+    }
+
+    // 初始化房间列表
+    function initRooms() {
+      const roomList = document.getElementById('room-list');
+      const mobileRoomList = document.getElementById('mobile-room-list');
+
+      rooms.forEach(room => {
+        // 桌面版房间列表
+        const roomItem = document.createElement('div');
+        roomItem.className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors flex items-center 
+                                 ${currentUser && room.id === currentUser.room ? 'bg-neutral-100 dark:bg-neutral-700 border-l-4 border-primary' : ''}`;
+        roomItem.innerHTML = `
+              <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                <i class="fa ${room.icon} text-primary"></i>
+              </div>
+              <div>
+                <div class="font-medium">${room.name}</div>
+                <div class="text-xs text-neutral-500 dark:text-neutral-400">${room.desc}</div>
+              </div>
+            `;
+        roomItem.addEventListener('click', () => joinRoom(room.id));
+        roomList.appendChild(roomItem);
+
+        // 移动版房间列表
+        const mobileRoomItem = document.createElement('div');
+        mobileRoomItem.className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors flex items-center 
+                                      ${currentUser && room.id === currentUser.room ? 'bg-neutral-100 dark:bg-neutral-700 border-l-4 border-primary' : ''}`;
+        mobileRoomItem.innerHTML = `
+              <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                <i class="fa ${room.icon} text-primary"></i>
+              </div>
+              <div>
+                <div class="font-medium">${room.name}</div>
+                <div class="text-sm text-neutral-500 dark:text-neutral-400">${room.desc}</div>
+              </div>
+            `;
+        mobileRoomItem.addEventListener('click', () => {
+          joinRoom(room.id);
+          document.getElementById('room-modal').classList.add('hidden');
+        });
+        mobileRoomList.appendChild(mobileRoomItem);
+      });
+    }
+
+    // 加入房间
+    function joinRoom(roomId) {
+      if (!currentUser) {
+        showLoginModal();
+        return;
+      }
+
+      // 重置lastMessageId
+      lastMessageId = null;
+
+      // 更新当前房间
+      const room = rooms.find(r => r.id === roomId);
+      if (!room) return;
+
+      currentUser.room = roomId;
+      document.getElementById('current-room').textContent = room.name;
+      document.getElementById('room-desc').textContent = room.desc;
+
+      // 更新房间列表选中状态
+      updateRoomSelection(roomId);
+
+      // 清空消息容器
+      const messageContainer = document.getElementById('message-container');
+      messageContainer.innerHTML = '';
+
+      // 添加加载提示
+      messageContainer.innerHTML = `
+        <div class="text-center py-6 text-neutral-600 dark:text-neutral-300">
+          <div class="inline-block w-10 h-10 border-2 border-neutral-300 dark:border-neutral-600 border-t-primary rounded-full animate-spin mb-3"></div>
+          <p>加载中...</p>
+        </div>
+      `;
+
+      // 取消之前的订阅
+      if (currentSubscription) {
+        currentSubscription.unsubscribe();
+        currentSubscription = null;
+      }
+
+      // 查询消息
+      const Message = AV.Object.extend(`ChatMessage_${roomId}`);
+      messageQuery = new AV.Query(Message);
+      messageQuery.limit(100);
+      messageQuery.ascending('createdAt');
+
+      // 设置实时订阅
+      try {
+        currentSubscription = messageQuery.subscribe();
+        currentSubscription.on('create', (newMessage) => {
+          addMessageToUI(newMessage.toJSON());
+        });
+      } catch (error) {
+        console.error('LiveQuery订阅失败:', error);
+        // 显示错误提示，但继续加载历史消息
+        messageContainer.innerHTML = `
+          <div class="text-center py-6 text-neutral-600 dark:text-neutral-300">
+            <p class="text-red-500 mb-2"><i class="fa fa-exclamation-circle"></i> 实时消息订阅失败</p>
+            <p>正在加载历史消息...</p>
+          </div>
+        `;
+      }
+
+      // 查询历史消息
+      messageQuery.find().then(messages => {
+        // 清空加载提示
+        messageContainer.innerHTML = '';
+        if (messages.length === 0) {
+          messageContainer.innerHTML = `
+            <div class="text-center py-6 text-neutral-600 dark:text-neutral-300 bg-neutral-100/50 dark:bg-neutral-800/50 rounded-xl">
+              <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center shadow-md">
+                <i class="fa fa-comments text-white text-2xl"></i>
+              </div>
+              <p class="font-medium">欢迎来到 <span class="font-bold text-primary">${room.name}</span></p>
+              <p class="text-sm mt-1">${room.desc}</p>
+            </div>
+          `;
+        } else {
+          messages.forEach(msg => {
+            addMessageToUI(msg.toJSON());
+            lastMessageId = msg.id;
+          });
+        }
+        scrollToBottom();
+
+        // 进入房间时自动刷新一次
+        setTimeout(() => {
+          refreshMessages();
+        }, 300);
+
+        // 开始定时刷新消息
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+        if (autoRefreshInterval > 0) {
+          refreshInterval = setInterval(() => {
+            refreshMessages();
+          }, autoRefreshInterval);
+          // 添加刷新状态样式
+          document.getElementById('auto-refresh-btn').classList.add('refresh-active');
+        } else {
+          // 无刷新间隔，不设置定时器
+          refreshInterval = null;
+          document.getElementById('auto-refresh-btn').classList.remove('refresh-active');
+        }
+      }).catch(error => {
+        console.error('获取消息失败:', error);
+        // 清除加载状态并显示错误信息
+        messageContainer.innerHTML = `
+          <div class="text-center py-6 text-neutral-600 dark:text-neutral-300">
+            <p class="text-red-500 mb-2"><i class="fa fa-exclamation-circle"></i> 获取消息失败</p>
+            <p class="text-sm">请点击刷新按钮重试</p>
+          </div>
+        `;
+      });
+
+      // 保存到本地存储
+      localStorage.setItem('chatAppUser', JSON.stringify({
+        id: currentUser.id,
+        nickname: currentUser.nickname,
+        room: currentUser.room
+      }));
+    }
+
+    // 更新房间选择状态
+    function updateRoomSelection(roomId) {
+      const roomItems = document.querySelectorAll('#room-list > div');
+      const mobileRoomItems = document.querySelectorAll('#mobile-room-list > div');
+
+      rooms.forEach((room, index) => {
+        const isSelected = room.id === roomId;
+        roomItems[index].className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors flex items-center 
+                                        ${isSelected ? 'bg-neutral-100 dark:bg-neutral-700 border-l-4 border-primary' : ''}`;
+        mobileRoomItems[index].className = `p-3 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors flex items-center 
+                                              ${isSelected ? 'bg-neutral-100 dark:bg-neutral-700 border-l-4 border-primary' : ''}`;
+      });
+    }
+
+    // 添加消息到UI
+    function addMessageToUI(message) {
+      const messageContainer = document.getElementById('message-container');
+      const isCurrentUser = message.userId === currentUser?.id;
+
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex ${isCurrentUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
+
+      let bgColor, textColor, bubbleClass;
+      if (isCurrentUser) {
+        bgColor = 'bg-primary';
+        textColor = 'text-white';
+        bubbleClass = 'bubble-right';
+      } else {
+        bgColor = 'bg-neutral-100 dark:bg-neutral-700';
+        textColor = 'text-neutral-800 dark:text-neutral-100';
+        bubbleClass = 'bubble-left';
+      }
+
+      // 解析消息内容
+      let contentHtml = '';
+      if (message.type === 'text') {
+        // 处理普通文本消息
+        contentHtml = `<p>${escapeHTML(message.content)}</p>`;
+      } else if (message.type === 'image') {
+        // 处理图片消息
+        contentHtml = `<img src="${message.content}" alt="图片" class="max-w-full rounded-md">`;
+      } else if (message.type === 'video') {
+        // 处理视频消息
+        contentHtml = `<video controls class="max-w-full rounded-md"><source src="${message.content}" type="${message.mimeType}"></video>`;
+      } else if (message.type === 'system') {
+        // 处理系统消息
+        msgDiv.className = 'flex justify-center animate-fade-in';
+        contentHtml = `
+              <div class="text-center px-4 py-1 rounded-full bg-neutral-200 dark:bg-neutral-700 text-xs text-neutral-600 dark:text-neutral-300">
+                ${escapeHTML(message.content)}
+              </div>
+            `;
+        bgColor = '';
+        textColor = '';
+        bubbleClass = '';
+      }
+
+      // 构建消息HTML
+      if (message.type !== 'system') {
+        msgDiv.innerHTML = `
+              <div class="max-w-[80%]">
+                <div class="flex items-center mb-1 ${isCurrentUser ? 'justify-end' : 'justify-start'}">
+                  ${isCurrentUser ? '' : `<span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">${escapeHTML(message.nickname)}</span>`}
+                  <span class="text-xs text-neutral-400 dark:text-neutral-500 ml-2">${formatTime(message.createdAt)}</span>
+                </div>
+                <div class="${bgColor} ${textColor} ${bubbleClass} p-3 shadow-sm">
+                  ${contentHtml}
+                </div>
+              </div>
+            `;
+      } else {
+        msgDiv.innerHTML = contentHtml;
+      }
+
+      messageContainer.appendChild(msgDiv);
+      scrollToBottom();
+    }
+
+    // 格式化时间
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    // 滚动到底部
+    function scrollToBottom(animate = true, distance = null) {
+      const messageContainer = document.getElementById('message-container');
+      // 只有在用户没有手动上滑或者强制滚动时才自动滚动到底部
+      if (!userScrolledUp || distance !== null) {
+        const scrollHeight = messageContainer.scrollHeight;
+        const clientHeight = messageContainer.clientHeight;
+        const scrollTop = messageContainer.scrollTop;
+
+        // 如果指定了距离，则只滚动指定距离
+        if (distance) {
+          const targetScrollTop = scrollTop + distance;
+          if (animate) {
+            smoothScroll(messageContainer, targetScrollTop, 300);
+          } else {
+            messageContainer.scrollTop = targetScrollTop;
+          }
+        } else {
+          // 否则滚动到底部
+          const targetScrollTop = scrollHeight - clientHeight;
+          if (animate) {
+            smoothScroll(messageContainer, targetScrollTop, 300);
+          } else {
+            messageContainer.scrollTop = targetScrollTop;
+          }
+        }
+      }
+    }
+
+    // 新增：平滑滚动函数
+    function smoothScroll(element, target, duration) {
+      const start = element.scrollTop;
+      const change = target - start;
+      const increment = 20;
+      let currentTime = 0;
+
+      const animateScroll = () => {
+        currentTime += increment;
+        const val = Math.easeInOutQuad(currentTime, start, change, duration);
+        element.scrollTop = val;
+        if (currentTime < duration) {
+          setTimeout(animateScroll, increment);
+        }
+      };
+
+      animateScroll();
+    }
+
+    // 新增：缓动函数
+    Math.easeInOutQuad = function(t, b, c, d) {
+      t /= d/2;
+      if (t < 1) return c/2*t*t + b;
+      t--;
+      return -c/2 * (t*(t-2) - 1) + b;
+    }
+
+    // 发送消息
+    async function sendMessage(content, type = 'text', mimeType = null) {
+      if (!currentUser) {
+        showLoginModal();
+        return;
+      }
+
+      if ((!content.trim() && type === 'text') || (type === 'image' || type === 'video') && !content) return;
+
+      const Message = AV.Object.extend(`ChatMessage_${currentUser.room}`);
+      const message = new Message();
+
+      message.set('userId', currentUser.id);
+      message.set('nickname', currentUser.nickname);
+      message.set('content', content);
+      message.set('type', type);
+      if (mimeType) {
+        message.set('mimeType', mimeType);
+      }
+
+      try {
+        await message.save();
+        if (type === 'text') {
+          document.getElementById('message-input').value = '';
+          // 隐藏表情选择器
+          document.getElementById('emoji-picker').classList.add('hidden');
+          // 新增：发送消息后滚动一个气泡大小的距离（约80px）
+          scrollToBottom(true, 80);
+        }
+      } catch (error) {
+        console.error('发送消息失败:', error);
+        alert('发送消息失败，请重试');
+      }
+    }
+
+    // 更新用户信息显示
+    function updateUserInfo() {
+      if (currentUser) {
+        document.getElementById('user-info').textContent = `${currentUser.nickname} (${currentUser.id})`;
+      }
+    }
+
+    // 设置事件监听器
+    function setupEventListeners() {
+      // 新增：消息容器滚动事件，检测用户是否手动上滑
+      const messageContainer = document.getElementById('message-container');
+      messageContainer.addEventListener('scroll', () => {
+        const scrollTop = messageContainer.scrollTop;
+        const scrollHeight = messageContainer.scrollHeight;
+        const clientHeight = messageContainer.clientHeight;
+
+        // 如果用户向上滚动了超过50px，则认为是手动上滑
+        if (scrollHeight - clientHeight - scrollTop > 50) {
+          userScrolledUp = true;
+        } else {
+          userScrolledUp = false;
+        }
+      });
+
+      // 登录/注册按钮事件
+      document.getElementById('auth-btn').addEventListener('click', () => {
+        const userId = document.getElementById('userid').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        // 验证用户ID格式 (只允许字母和数字)
+        const idRegex = /^[a-zA-Z0-9]+$/;
+        if (!idRegex.test(userId)) {
+          document.getElementById('userid').classList.add('input-error');
+          setTimeout(() => {
+            document.getElementById('userid').classList.remove('input-error');
+          }, 2000);
+          alert('用户ID只能包含字母和数字');
+          return;
+        }
+
+        // 验证密码格式 (只允许字母和数字)
+        if (!idRegex.test(password)) {
+          document.getElementById('password').classList.add('input-error');
+          setTimeout(() => {
+            document.getElementById('password').classList.remove('input-error');
+          }, 2000);
+          alert('密码只能包含字母和数字');
+          return;
+        }
+
+        if (!userId || !password) {
+          // 添加错误状态到空输入框
+          if (!userId) document.getElementById('userid').classList.add('input-error');
+          if (!password) document.getElementById('password').classList.add('input-error');
+
+          // 2秒后移除错误状态
+          setTimeout(() => {
+            document.getElementById('userid').classList.remove('input-error');
+            document.getElementById('password').classList.remove('input-error');
+          }, 2000);
+
+          alert('请填写用户ID和密码');
+          return;
+        }
+
+        // 显示加载状态
+      const authBtn = document.getElementById('auth-btn');
+      const authBtnText = document.getElementById('auth-btn-text');
+      const authLoading = document.getElementById('auth-loading');
+
+      authBtnText.textContent = '处理中...';
+      authLoading.classList.remove('hidden');
+      authBtn.disabled = true;
+      authBtn.classList.remove('hover:bg-primary/90');
+
+        // 先尝试登录
+        AV.User.logIn(userId, password).then(user => {
+          // 登录成功
+          handleAuthSuccess(user);
+        }).catch(error => {
+          console.log('登录失败，尝试注册:', error);
+          // 如果是用户不存在或密码错误，尝试注册
+          if (error.code === 211 || error.code === 210) {
+            const newUser = new AV.User();
+            newUser.setUsername(userId);
+            newUser.setPassword(password);
+            // 使用用户ID作为昵称
+            newUser.set('nickname', userId);
+
+            newUser.signUp().then(user => {
+              handleAuthSuccess(user);
+            }).catch(signUpError => {
+              console.error('注册失败:', signUpError);
+              // 恢复按钮状态
+              document.getElementById('auth-btn-text').textContent = '立即进入';
+              document.getElementById('auth-loading').classList.add('hidden');
+              document.getElementById('auth-btn').disabled = false;
+              document.getElementById('auth-btn').classList.add('hover:bg-primary/90');
+              alert('注册失败: ' + signUpError.message);
+            });
+          } else {
+            // 恢复按钮状态
+            document.getElementById('auth-btn-text').textContent = '立即进入';
+            document.getElementById('auth-loading').classList.add('hidden');
+            document.getElementById('auth-btn').disabled = false;
+            document.getElementById('auth-btn').classList.add('hover:bg-primary/90');
+            alert('登录失败: ' + error.message);
+          }
+        });
+      });
+
+      // 新增：输入框聚焦事件，移除错误状态
+      const inputs = [document.getElementById('userid'), document.getElementById('password')];
+      inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+          input.classList.remove('input-error');
+        });
+      });
+
+
+
+      // 处理登录/注册成功逻辑
+      function handleAuthSuccess(user) {
+        currentUser = {
+          id: user.id,
+          nickname: user.get('nickname') || user.getUsername()
+        };
+
+        // 恢复按钮状态
+        document.getElementById('auth-btn-text').textContent = '立即进入';
+        document.getElementById('auth-loading').classList.add('hidden');
+        document.getElementById('auth-btn').disabled = false;
+        document.getElementById('auth-btn').classList.add('hover:bg-primary/90');
+
+        // 保存到本地存储
+        localStorage.setItem('chatAppUser', JSON.stringify({
+          id: currentUser.id,
+          nickname: currentUser.nickname,
+          room: 'general' // 默认房间
+        }));
+
+        document.getElementById('login-modal').classList.add('hidden');
+        document.getElementById('main-container').classList.remove('hidden');
+        document.getElementById('message-input').disabled = false;
+        document.getElementById('message-input').placeholder = "输入消息...";
+        document.getElementById('send-btn').disabled = false;
+        document.getElementById('send-btn').classList.remove('bg-gray-400');
+        document.getElementById('send-btn').classList.add('bg-primary');
+        document.getElementById('login-prompt').classList.add('hidden');
+        document.getElementById('logout-btn').classList.remove('hidden');
+
+        updateUserInfo();
+
+        // 加入默认房间
+        joinRoom('general');
+
+        // 显示新手指南弹窗
+        setTimeout(() => {
+          showGuideModal();
+        }, 500);
+      }
+
+      // 新增：显示新手指南弹窗
+      function showGuideModal() {
+        // 创建弹窗
+        const guideModal = document.createElement('div');
+        guideModal.id = 'guide-modal';
+        guideModal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center';
+        guideModal.innerHTML = `
+          <div class="bg-white dark:bg-neutral-800 rounded-xl w-full max-w-md p-6 shadow-xl animate-fade-in">
+            <div class="text-center mb-4">
+              <h3 class="text-xl font-bold text-primary">使用指南</h3>
+            </div>
+            <div class="space-y-4 text-sm">
+              <div class="flex items-start">
+                <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                  <i class="fa fa-refresh text-primary text-xs"></i>
+                </div>
+                <p>点击<span class="text-primary font-medium">刷新按钮</span>可手动获取最新消息</p>
+              </div>
+              <div class="flex items-start">
+                <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                  <i class="fa fa-clock-o text-primary text-xs"></i>
+                </div>
+                <p>点击<span class="text-primary font-medium">自动刷新按钮</span>可设置消息自动刷新频率</p>
+              </div>
+              <div class="flex items-start">
+                <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                  <i class="fa fa-comments text-primary text-xs"></i>
+                </div>
+                <p>选择不同的<span class="text-primary font-medium">主题房间</span>可参与不同话题的讨论</p>
+              </div>
+            </div>
+            <button id="close-guide-modal" class="w-full mt-6 bg-primary hover:bg-primary/90 text-white py-2 rounded-lg transition-colors button-transition">
+              我知道了
+            </button>
+          </div>
+        `;
+        document.body.appendChild(guideModal);
+
+        // 添加关闭事件
+        document.getElementById('close-guide-modal').addEventListener('click', () => {
+          guideModal.classList.add('hidden');
+          setTimeout(() => {
+            document.body.removeChild(guideModal);
+          }, 300);
+        });
+      }
+
+      // 登出按钮
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+          }
+
+          // 取消实时订阅
+          if (currentSubscription) {
+            currentSubscription.unsubscribe();
+            currentSubscription = null;
+          }
+
+          // LeanCloud登出
+          AV.User.logOut();
+          
+          currentUser = null;
+          localStorage.removeItem('chatAppUser');
+
+          document.getElementById('main-container').classList.add('hidden');
+          document.getElementById('message-input').disabled = true;
+          document.getElementById('message-input').placeholder = "请先登录再发言...";
+          document.getElementById('send-btn').disabled = true;
+          document.getElementById('send-btn').classList.add('bg-gray-400');
+          document.getElementById('send-btn').classList.remove('bg-primary');
+          document.getElementById('login-prompt').classList.remove('hidden');
+          document.getElementById('logout-btn').classList.add('hidden');
+
+          document.getElementById('user-info').textContent = '未登录';
+
+          showLoginModal();
+        });
+      }
+
+      // 新增：手动刷新消息按钮
+      document.getElementById('refresh-messages-btn').addEventListener('click', () => {
+        refreshMessages();
+      });
+
+      // 新增：自动刷新间隔按钮
+      document.getElementById('auto-refresh-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const intervalMenu = document.getElementById('interval-menu');
+        intervalMenu.classList.toggle('hidden');
+      });
+
+      // 新增：点击其他地方关闭间隔选择菜单
+      document.addEventListener('click', () => {
+        const intervalMenu = document.getElementById('interval-menu');
+        intervalMenu.classList.add('hidden');
+      });
+
+      // 新增：选择自动刷新间隔
+      document.querySelectorAll('.interval-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const interval = parseInt(option.getAttribute('data-interval'));
+          autoRefreshInterval = interval;
+          // 修复按钮文本更新
+          // 修复按钮文本更新 - 确保不显示"秒"字
+          document.getElementById('refresh-interval-text').textContent = interval > 0 ? interval / 1000 : '无';
+          document.getElementById('interval-menu').classList.add('hidden');
+
+          // 更新自动刷新定时器
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = null;
+      // 移除刷新状态样式
+      document.getElementById('auto-refresh-btn').classList.remove('refresh-active');
+    }
+
+    if (interval > 0) {
+      refreshInterval = setInterval(() => {
+        refreshMessages();
+      }, autoRefreshInterval);
+      // 添加刷新状态样式
+      document.getElementById('auto-refresh-btn').classList.add('refresh-active');
+    } else {
+      // 无刷新间隔，确保移除样式
+      document.getElementById('auto-refresh-btn').classList.remove('refresh-active');
+    }
+        });
+      });
+
+      // 初始化自动刷新为"无"选项
+      autoRefreshInterval = 0;
+      document.getElementById('refresh-interval-text').textContent = '无';
+      lastMessageId = null; // 确保每次初始化时重置
+
+      // 发送按钮
+      document.getElementById('send-btn').addEventListener('click', () => {
+        const content = document.getElementById('message-input').value.trim();
+        if (content) {
+          sendMessage(content);
+        }
+      });
+
+      // 按Enter发送消息
+      document.getElementById('message-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const content = document.getElementById('message-input').value.trim();
+          if (content) {
+            sendMessage(content);
+          }
+        }
+      });
+
+      // 表情包按钮
+      document.getElementById('emoji-btn').addEventListener('click', () => {
+        const emojiPicker = document.getElementById('emoji-picker');
+        emojiPicker.classList.toggle('hidden');
+      });
+
+      // 表情包选择
+      const emojiItems = document.querySelectorAll('.emoji-item');
+      emojiItems.forEach(item => {
+        item.addEventListener('click', () => {
+          const messageInput = document.getElementById('message-input');
+          messageInput.value += item.textContent;
+          document.getElementById('emoji-picker').classList.add('hidden');
+        });
+      });
+
+      // 文件上传按钮
+      document.getElementById('upload-btn').addEventListener('click', () => {
+        document.getElementById('file-input').click();
+      });
+
+      // 文件选择事件
+      document.getElementById('file-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const avFile = new AV.File(file.name, file);
+          try {
+            await avFile.save();
+            const fileUrl = avFile.url();
+            const type = file.type.startsWith('image') ? 'image' : 'video';
+            sendMessage(fileUrl, type, file.type);
+          } catch (error) {
+            console.error('文件上传失败:', error);
+            alert('文件上传失败，请重试');
+          }
+        }
+        e.target.value = '';
+      });
+
+      // 移动端房间选择按钮
+      document.getElementById('mobile-room-btn').addEventListener('click', () => {
+        document.getElementById('room-modal').classList.remove('hidden');
+      });
+
+      // 关闭移动端房间选择模态框
+      document.getElementById('close-modal').addEventListener('click', () => {
+        document.getElementById('room-modal').classList.add('hidden');
+      });
+
+      // 点击框外区域关闭表情包选择器
+      document.addEventListener('click', (e) => {
+        const emojiPicker = document.getElementById('emoji-picker');
+        const emojiBtn = document.getElementById('emoji-btn');
+        if (!emojiPicker.contains(e.target) && !emojiBtn.contains(e.target)) {
+          emojiPicker.classList.add('hidden');
+        }
+      });
+
+      // 点击框外区域关闭移动端房间选择模态框
+      document.addEventListener('click', (e) => {
+        const roomModal = document.getElementById('room-modal');
+        const mobileRoomBtn = document.getElementById('mobile-room-btn');
+        const closeModalBtn = document.getElementById('close-modal');
+        const modalContent = roomModal.querySelector('.bg-white, .bg-neutral-800');
+        if (!modalContent.contains(e.target) && !mobileRoomBtn.contains(e.target) && !closeModalBtn.contains(e.target)) {
+          roomModal.classList.add('hidden');
+        }
+      });
+    }
+
+    // 刷新消息
+    function refreshMessages() {
+      if (!currentUser) return;
+      const Message = AV.Object.extend(`ChatMessage_${currentUser.room}`);
+      const query = new AV.Query(Message);
+      query.limit(100);
+      query.ascending('createdAt');
+      if (lastMessageId) {
+        query.greaterThan('objectId', lastMessageId);
+      }
+
+      query.find().then(messages => {
+        messages.forEach(msg => {
+          addMessageToUI(msg.toJSON());
+          lastMessageId = msg.id;
+        });
+        scrollToBottom();
+      }).catch(error => {
+        console.error('刷新消息失败:', error);
+      });
+    }
+  </script>
+</body>
+
+</html>
